@@ -14,6 +14,7 @@ At some point during this process, you will need to enter in the following user 
 
 ### General
 - Examples of data analyses and extraction using the SEER*Stat county databases are in detail here: https://seer.cancer.gov/seerstat/tutorials/county.html
+- Variables & recode definitions from the data can be found here: https://seer.cancer.gov/analysis/
 - Information regarding the SEER*Stat databases can be found here: https://seer.cancer.gov/data-software/datasets.html
   - Data includes US mortality data, county population estimates to calculate cancer incidence and mortality rates, standard populations (age distributions), county attributes, expected survival life tables 
 - Have data from the American Community Survey (ACS) that has data from 1970s – 2017 on county attributes such as  
