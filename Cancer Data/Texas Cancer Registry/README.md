@@ -1,4 +1,8 @@
 # Texas Cancer Registry (TCR)
+
+### Access to TCR Limited-Use Data
+After completing the data request form, I recieved access to their database. Through the SEER* Stat format and software, I'm able to create data tables with information regarding a variety of subjects (histologic type, cancer type, county, etc.). More information regarding the dataset and its definitions can be found through this link: https://www.dshs.texas.gov/tcr/data/limited-use.aspx
+
 ### General
 - In 2018, received 211,000 reports of cancer from 550 
   - Hospitals
