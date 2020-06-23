@@ -1,7 +1,7 @@
 # CPRIT 2020 Project: Dileka Gunawardana 
 ### Spatiotemporal Analysis &amp; Dashboard 
 #### Mentor: Dr. Cici Bauer, UT Houston School of Public Health
-#### Purpose: Determine & visualize the spatiotemporal relationships between COVID-19 and lung cancer in the state of Texas. 
+#### Purpose: Determine & visualize the spatiotemporal relationships between COVID-19 and various histologic types of lung cancer in the state of Texas. 
 
 #### Project Goals: 
 1. Literature review thoroughly understanding our current knowledge of the spatio-temporal & general relationships between COVID-19 and lung cancer
