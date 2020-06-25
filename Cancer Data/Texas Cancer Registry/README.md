@@ -24,7 +24,7 @@ After completing the data request form, I recieved access to their database. Thr
 - **Projected** – estimated by applying incidence and mortality rates based on Texas population projections provided by Center for Health Statistics, TX Department of State Health Services. 
 
 ### Citing Requirement
-“Cancer data have been provided by the Texas Cancer Registry, Cancer Epidemiology and Surveillance Branch, Texas Department of State Health Services, 1100 West 49th Street, Austin, TX 78756, https://www.dshs.texas.gov/tcr/.”
+Texas Cancer Registry (www.dshs.state.tx.us/tcr) SEER*Stat Database, Limited_Use 1995-2017 Incidence, Texas statewide, Texas Department of State Health Services, created December 2019, based on NPCR-CSS Submission, cut-off 11/07/19.
 ### Contact Information
 https://www.dshs.texas.gov/tcr/contact.aspx
 **Data Requests:** CancerData@dshs.texas.gov
