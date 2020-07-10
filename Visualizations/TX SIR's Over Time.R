@@ -54,4 +54,35 @@ nb2INLA("tx_SIR_map.adj", tx_nb)
 tx_g <- inla.read.graph(filename = "tx_SIR_map.adj")
 
 #Prep for INLA by completing the dataset
+colnames(county_SIRs)[5] <- "Y"
+colnames(county_SIRs)[4] <- "E"
+county_SIRs$County_Code <- as.factor(county_SIRs$County_Code)
+county_SIRs$idarea <- as.numeric(county_SIRs$County_Code)
+county_SIRs$idarea1 <- county_SIRs$idarea
+county_SIRs$idtime <- 1 + county_SIRs$Year- min(county_SIRs$Year)
+county_SIRs$Y <- as.integer(county_SIRs$Y)
+formula1 <- Y ~ f(idarea, model = "bym", graph = tx_g) +
+  f(idarea1, idtime, model = "iid") + idtime
+res1 <- inla(formula1, 
+            family = "poisson", data = county_SIRs, E = E,
+            control.predictor = list(compute = TRUE))  
+county_SIRs$RR <- res1$summary.fitted.values[, "mean"]
+county_SIRs$LL <- res1$summary.fitted.values[, "0.025quant"]
+county_SIRs$UL <- res1$summary.fitted.values[, "0.975quant"]  
+summary(res1)
+### Plots After INLA ###
+tx_SIR_map_sf <- merge(tx_SIR_map_sf, county_SIRs,
+                       by.x = c("FIPS_ST_CN", "Year"),
+                       by.y = c("County_Code", "Year"))
+
+plot3 <- ggplot(tx_SIR_map_sf) + geom_sf(aes(fill = RR)) +
+  facet_wrap(~Year, dir = "h", ncol = 3) +
+  ggtitle("SIR's Over Time After INLA Smoothing") + theme_bw() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank()
+  ) +
+  scale_fill_gradient2(midpoint = 1, low = "blue", mid = "white", high = "red")
+plot3
 
