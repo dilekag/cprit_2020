@@ -11,7 +11,7 @@ map_data <- readOGR(dsn = "GitHub/cprit_2020/Analysis/Shapefile Geographic Data/
 # Extract TX data regarding 1995 lung cancer SIR's
 county_SIR_1995 <- read_excel("GitHub/cprit_2020/Analysis/Clean Data for Plots/County SIRs 1995.xlsx")
 #Combine the two datasets by county FIPS code
-full <- merge(map_data, county_SIR_1995, by.x = "FIPS_ST_CN", by.y = "County Code")
+full <- merge(map_data, county_SIR_1995, by.x = "FIPS_ST_CN", by.y = "County_Code")
 keeps <- c("CNTY_NM","SIR")
 full <- full[keeps]
 
