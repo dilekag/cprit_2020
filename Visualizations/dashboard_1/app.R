@@ -9,6 +9,7 @@
 
 library(shiny)
 library(shinydashboard)
+library(readxl)
 ratesDataAll <- read_excel("rates_data.xlsx", sheet = 1)
 ratesDataAdeno <- read_excel("rates_data.xlsx", sheet = 2)
 ratesDataSmall <- read_excel("rates_data.xlsx", sheet = 3)
@@ -81,7 +82,8 @@ server <- function(input, output) {
                 }
             }
         }
-        plot(c(1995:2015),y)        
+        plot(c(1995:2015),y)
+        abline()
     })
     output$adenoRatesPlot <- renderPlot({
         y <- rep(0,21)
