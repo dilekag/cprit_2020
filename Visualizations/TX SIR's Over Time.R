@@ -38,12 +38,6 @@ plot1 <- ggplot(tx_SIR_map_sf) + geom_sf(aes(fill = SIR)) +
   ) +
   scale_fill_gradient2(midpoint = 1, low = "blue", mid = "white", high = "red")
 plot1
-#Time Plot of SIR's
-plot2 <- ggplot(county_SIRs, aes(x= Year, y = SIR,
-                                 group = County_Code, color = County_Code)) +
-  geom_line() + geom_point(size = 2) + theme_bw() + theme(legend.position = "none")
-plot2 <- ggplotly(plot2)
-plot2
 
 #### INLA MODELING ####
 library(INLA)
