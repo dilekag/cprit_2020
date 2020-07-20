@@ -6,38 +6,49 @@ library(plotly)
 library(leaflet)
 library(tidyr)
 
-setwd("~/")
+#Set working directory to GitHub folder
+setwd("~/GitHub/cprit_2020")
+
+
 # Extract TX map data for plotting 
-map_data <- readOGR(dsn = "GitHub/cprit_2020/Analysis/Shapefile Geographic Data/Texas_Counties")
+map_data <- readOGR(dsn = "Analysis/Shapefile Geographic Data/Texas_Counties")
 # Extract TX data regarding 1995 lung cancer SIR's
-county_SIRs <- read_excel("GitHub/cprit_2020/Analysis/Clean Data for Plots/County SIRs All Years.xlsx")
+county_SIRs <- read_excel("Analysis/Clean Data for Plots/Every Year 1995-2015/All by Hist Type.xlsx", sheet = 1)
+# sheet = 1 --> All histologic types
+# sheet = 2 --> Adenocarcinoma
+# sheet = 3 --> Small Cell Carcinoma
+# sheet = 4 --> Squamous Cell Carcinoma
+# sheet = 5 --> Other Non-small Cell Carcinoma
+
 #Reshape to prep the data over time to be merged with the map data
 county_SIRs <- data.frame(county_SIRs)
 wide_SIRs <- reshape(county_SIRs,
                      timevar = "Year",
                      idvar = "County_Code",
                      direction = "wide")
-wide_SIRs[1:2,]
+
 #Merge two datasets
 tx_SIR_map <- merge(map_data, wide_SIRs, by.x = "FIPS_ST_CN", by.y = "County_Code")  
+
 #Convert to sf object for plotting
 tx_SIR_map_sf <- st_as_sf(tx_SIR_map)
 tx_SIR_map_sf <- gather(tx_SIR_map_sf, Year, SIR, paste0("SIR.", c(1995, 2000, 2005, 2010, 2015)))
 tx_SIR_map_sf$Year <- as.integer(substring(tx_SIR_map_sf$Year, 5, 8))
 
 #### PLOTS ####
-
+"
 #SIR's over time across counties
 plot1 <- ggplot(tx_SIR_map_sf) + geom_sf(aes(fill = SIR)) +
-  facet_wrap(~Year, dir = "h", ncol = 3) +
-  ggtitle("SIR's Over Time") + theme_bw() +
+  facet_wrap(~Year, dir ='h', ncol = 3) +
+  theme_bw() +
   theme(
     axis.text.x = element_blank(),
     axis.text.y = element_blank(),
     axis.ticks = element_blank()
   ) +
-  scale_fill_gradient2(midpoint = 1, low = "blue", mid = "white", high = "red")
+  scale_fill_gradient2(midpoint = 1, low = 'blue', mid = 'white', high = 'red')
 plot1
+"
 
 #### INLA MODELING ####
 library(INLA)
@@ -56,9 +67,13 @@ county_SIRs$idarea1 <- county_SIRs$idarea
 county_SIRs$idtime <- 1 + county_SIRs$Year- min(county_SIRs$Year)
 county_SIRs$Y <- as.integer(county_SIRs$Y)
 
-
+#Define the model
 formula1 <- Y ~ f(idarea, model = "bym", graph = tx_g) +
   f(idarea1, idtime, model = "iid") + f(idtime, model = "rw2") 
+
+#Run INLA
 res1 <- inla(formula1, 
              family = "poisson", data = county_SIRs, E = E,
              control.predictor = list(compute = TRUE))  
+
+plot(res1$summary.random$idtime$mean)
