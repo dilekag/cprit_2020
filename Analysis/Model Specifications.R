@@ -65,15 +65,21 @@ county_SIRs$County_Code <- as.factor(county_SIRs$County_Code)
 county_SIRs$idarea <- as.numeric(county_SIRs$County_Code)
 county_SIRs$idarea1 <- county_SIRs$idarea
 county_SIRs$idtime <- 1 + county_SIRs$Year- min(county_SIRs$Year)
+county_SIRs$idtime1 <- county_SIRs$idtime
 county_SIRs$Y <- as.integer(county_SIRs$Y)
 
 #Define the model
 formula1 <- Y ~ f(idarea, model = "bym", graph = tx_g) +
-  f(idarea1, idtime, model = "iid") + f(idtime, model = "rw2") 
+  f(idarea1, idtime1, model = "iid") + f(idtime, model = "rw1") 
 
 #Run INLA
 res1 <- inla(formula1, 
              family = "poisson", data = county_SIRs, E = E,
-             control.predictor = list(compute = TRUE))  
+             control.predictor = list(compute = TRUE), control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE))  
 
+#does this plot mean that the average relative risk has increased over time? 
 plot(res1$summary.random$idtime$mean)
+res1$waic$waic
+res1$dic$dic
+res1$cpo$cpo
+

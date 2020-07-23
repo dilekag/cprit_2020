@@ -10,19 +10,18 @@ setwd("~/")
 # Extract TX map data for plotting 
 map_data <- readOGR(dsn = "GitHub/cprit_2020/Analysis/Shapefile Geographic Data/Texas_Counties")
 # Extract TX data regarding 1995 lung cancer SIR's
-county_SIRs <- read_excel("GitHub/cprit_2020/Analysis/Clean Data for Plots/County SIRs All Years.xlsx")
+county_SIRs <- read_excel("GitHub/cprit_2020/Analysis/Clean Data for Plots/5-Year Intervals/County SIRs All Years.xlsx")
 #Reshape to prep the data over time to be merged with the map data
 county_SIRs <- data.frame(county_SIRs)
 wide_SIRs <- reshape(county_SIRs,
              timevar = "Year",
              idvar = "County_Code",
              direction = "wide")
-wide_SIRs[1:2,]
 #Merge two datasets
 tx_SIR_map <- merge(map_data, wide_SIRs, by.x = "FIPS_ST_CN", by.y = "County_Code")  
 #Convert to sf object for plotting
 tx_SIR_map_sf <- st_as_sf(tx_SIR_map)
-tx_SIR_map_sf <- gather(tx_SIR_map_sf, Year, SIR, paste0("SIR.", c(1995, 2000, 2005, 2010, 2015)))
+tx_SIR_map_sf <- gather(tx_SIR_map_sf, Year, Expected, paste0("Expected.", c(1995, 2000, 2005, 2010, 2015)))
 tx_SIR_map_sf$Year <- as.integer(substring(tx_SIR_map_sf$Year, 5, 8))
 
 #### PLOTS ####
