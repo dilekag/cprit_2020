@@ -17,4 +17,4 @@
   - Same map but COVID-19 mortality rate 
 - Attempt using some spatial span/ clustering R packages to see if there are certain areas/ clusters where any of these rates/ covariates seem to play a particularly large role
 
-*There’s no literature suggesting that having cancer increases the likelihood of contracting cancer although there is literature suggesting that it increases the likelihood of passing away*
+*There’s no literature suggesting that having cancer increases the likelihood of contracting COVID-19 although there is literature suggesting that it increases the likelihood of passing away*
