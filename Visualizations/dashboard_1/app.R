@@ -16,6 +16,7 @@ library(sf)
 library(tidyr)
 library(INLA)
 library(spdep)
+library(leaflet)
 
 # Map data
 map_data <- readOGR(dsn = "Texas_Counties")
@@ -133,7 +134,24 @@ ui <- dashboardPage(
             # Third Tab
             tabItem(tabName = "covar"),
             # Fourth Tab
-            tabItem(tabName = "covid")
+            tabItem(tabName = "covid",
+                tags$h5("This", tags$strong("COVID-19 and Lung Cancer"), "page contains side-by-side plots comparing the relative rates of lung cancer and the recent COVID-19 epidemic that has been significantly straining Texas hospital resources. It is hypothesized that COVID-19 can have adverse effects on peoples' lungs, so when determining", tags$strong("health funding"), ", it's essential to consider these two diseases in relation to one another."),
+                tags$br(),
+                fluidRow(
+                    box(title = "Select the First Variable of Interest", status = "warning", solidHeader = TRUE, width = 6,
+                        radioButtons("covid",NULL, c("COVID-19 Cases per 100k Texans"="cases","Rate of Confirmed COVID-19 Patients who Died"="mort")),
+                        tags$figcaption(tags$em("COVID-19 Data from TX DSHS as of July 21st, 2020"))
+                        ),
+                    box(title = "Select the Second Variable of Interest", status = "warning", solidHeader = TRUE, width = 6,
+                        radioButtons("lung_cancer",NULL,c("Lung Cancer Diagnoses per 100k Texans in 2017"="cases","Deaths from Lung Cancer per 100k Texans for Sum of Yearly Populations between 1995 and 2017"="mort"))
+                    )
+                ),
+                fluidRow(
+                    box(width = 6, leafletOutput("covid")),
+                    box(width = 6, leafletOutput("lung_cancer"))
+                )
+                    
+            )
         )
     )
 )
@@ -439,6 +457,60 @@ server <- function(input, output) {
         plot(res()$summary.random$idtime$mean)
     })
     #res()$marginals.random$idarea$index. [FIPS code]
+    output$covid <- renderLeaflet({
+        if (input$covid == "cases"){data <- read_excel("covid_dashboard_data.xlsx", sheet = 1)}
+        if (input$covid == "mort"){data <- read_excel("covid_dashboard_data.xlsx", sheet = 2)}
+        map <- merge(map_data, data, by.x = "FIPS_ST_CN", by.y = "County_Code")
+        l <- leaflet(map) %>% addTiles()
+        pal <- colorNumeric(palette = "YlOrRd", domain=map$Rate)
+        labels <- sprintf("<strong> %s </strong> <br/>
+                  Rate: %s", map$CNTY_NM, round(map$Rate,4)) %>% lapply(htmltools::HTML)
+        l %>% 
+            addPolygons(
+                color = "grey", weight = 1,
+                fillColor = ~ pal(Rate), fillOpacity = 0.5,
+                highlightOptions = highlightOptions(weight = 4),
+                label = labels,
+                labelOptions = labelOptions(
+                    style = list(
+                        "font-weight" = "normal",
+                        padding = "3px 8px"
+                    ),
+                    textsize = "15px", direction = "auto"
+                )    
+            ) %>%
+            addLegend(
+                pal = pal, values = ~Rate, opacity = 0.5,
+                title = "Rate", position = "bottomright"
+            )
+    })
+    output$lung_cancer <- renderLeaflet({
+        if (input$lung_cancer == "cases"){data <- read_excel("covid_dashboard_data.xlsx", sheet = 3)}
+        if (input$lung_cancer == "mort"){data <- read_excel("covid_dashboard_data.xlsx", sheet = 4)}        
+        map <- merge(map_data, data, by.x = "FIPS_ST_CN", by.y = "County_Code")
+        l <- leaflet(map) %>% addTiles()
+        pal <- colorNumeric(palette = "YlOrRd", domain=map$Rate)
+        labels <- sprintf("<strong> %s </strong> <br/>
+                  Rate: %s", map$CNTY_NM, round(map$Rate,4)) %>% lapply(htmltools::HTML)
+        l %>% 
+            addPolygons(
+                color = "grey", weight = 1,
+                fillColor = ~ pal(Rate), fillOpacity = 0.5,
+                highlightOptions = highlightOptions(weight = 4),
+                label = labels,
+                labelOptions = labelOptions(
+                    style = list(
+                        "font-weight" = "normal",
+                        padding = "3px 8px"
+                    ),
+                    textsize = "15px", direction = "auto"
+                )    
+            ) %>%
+            addLegend(
+                pal = pal, values = ~Rate, opacity = 0.5,
+                title = "Rate", position = "bottomright"
+            )
+        })
 }
 
 # Run the application 
