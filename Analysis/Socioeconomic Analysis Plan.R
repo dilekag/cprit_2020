@@ -6,7 +6,7 @@ library(leaflet)
 library(tidyr)
 
 #Set working directory to GitHub folder
-setwd("C:/Users/Dilek/OneDrive/Documents/GitHub/cprit_2020/visualizations/dashboard_1")
+setwd("GitHub/cprit_2020/visualizations/dashboard_1")
 
 
 # Extract TX map data for plotting 
@@ -20,6 +20,14 @@ data <- read_excel("county_sir_data.xlsx", sheet = 1)
 # sheet = 5 --> Other Non-small Cell Carcinoma
 rurality <- read_excel("socioeconomic_data.xlsx", sheet = 1)
 poverty <- read_excel("socioeconomic_data.xlsx", sheet = 2)
+
+tx_nb <- poly2nb(map_data)
+Q <- Diagonal(x = sapply(tx_nb, length))
+for(i in 2:nrow(map_data)) {
+  Q[i - 1, i] <- -1
+  Q[i, i - 1] <- -1
+}
+C <- Diagonal(x = 1, n = nrow(map_data)) - Q
 
 soci_data <- merge(data, rurality, by = c("County_Code","Year"))
 soci_data <- merge(soci_data, poverty, by = c("County_Code","Year"))
@@ -36,7 +44,7 @@ formula <- Observed ~ Rurality_Score + Poverty_Rate +
   f(idarea, model = "generic1", Cmatrix = C) + #mat_c()
   f(e, model = "iid") + 
   f(idtime, model = "rw2", constr = T) 
-inla(formula, 
+res <- inla(formula, 
    family = "poisson", data = soci_data, E = Expected,
    control.predictor = list(compute = TRUE), control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE))
 

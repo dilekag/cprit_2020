@@ -33,6 +33,8 @@ countyRatesAdeno <- read_excel("rates_county.xlsx", sheet = 2)
 countyRatesSmall <- read_excel("rates_county.xlsx", sheet = 3)
 countyRatesSquamous <- read_excel("rates_county.xlsx", sheet = 4)
 countyRatesOtherNonSmall <- read_excel("rates_county.xlsx", sheet = 5)
+# Rates for different counties for ALL years (county-level analysis on INLA page)
+#check_SIRAll <- county_rates_all_years
 #SIR data by county (5-Year Intervals)
 countySIRAll <- read_excel("county_sir_data.xlsx", sheet = 1)
 countySIRAdeno <- read_excel("county_sir_data.xlsx", sheet = 2)
@@ -72,7 +74,7 @@ ui <- dashboardPage(skin = "red",
                     tags$h2("Spatiotemporal & Socioeconomic Lung Cancer Relationships in Texas Between 1995 and 2015"),
                     fluidRow(tags$img(height = 2, width = 1500, src = 'black_line.png')),
                     tags$h5(
-                        "Lung cancer is the leading cause of mortality in the world, with many people dying due to 
+                        "Lung cancer is the leading cause of cancer mortality in the world, with many people dying due to 
                         late-stage diagnoses.", tags$sup("1"), "As a result, it has become increasingly important to determine sub-populations and 
                         area-types that have an increased risk for the disease. In the United States alone, approximately 228,280 people are 
                         projected to be diagnosed with lung cancer in 2020.", tags$sup("2")
@@ -164,14 +166,15 @@ ui <- dashboardPage(skin = "red",
                     tags$ol(
                         tags$li(tags$strong("Observed"),"(true) number of lung cancer cases"), 
                         tags$li(tags$strong("Expected"), "number of lung cancer cases (calculated using census data)", tags$sup("1")), 
-                        fluidRow(withMathJax("$$30 Demographic Groups = 2 Genders (Male & Female) x 5 Race Groups (White, Black, Asian/ Pacific Islander, American Indian & Hispanic) x 3 Age Groups (<54 years, 55-74 years, 75+ years)$$")),
-                        fluidRow(withMathJax("Assuming 30 demographic groups (above) in Texas, expected cases are calculated by the following formulas: $$lcr_{ij} \\text{ (Lung Cancer Rate for Demographic i in Year j)} = \\frac{\\text{Number of People of Demographic i Diagnosed with Lung Cancer in Year j in All TX}}{\\text{Number of People of Demographic i Living in TX in Year j}} $$")),
+                        fluidRow(tags$h5("Texas' population was divided into 30 demographic groups by gender, race, and age. Each was assumed to have its own unique rate of lung cancer. 
+                                         2 Genders (Male & Female) x 5 Race Groups (White, Black, Asian/ Pacific Islander, American Indian & Hispanic) x 3 Age Groups (<54 years, 55-74 years, 75+ years) = 30 Demographic Groups")),
+                        fluidRow(withMathJax("Assuming these 30 demographic groups in Texas, expected cases are calculated by the following formulas: $$lcr_{ij} \\text{ (Lung Cancer Rate for Demographic i in Year j)} = \\frac{\\text{Number of People of Demographic i Diagnosed with Lung Cancer in Year j in All TX}}{\\text{Number of People of Demographic i Living in TX in Year j}} $$")),
                         fluidRow(withMathJax("$$\\text{Expected Cases in County A in Year j} = \\sum_{i=1}^{30} \\text{Number of People of Demographic i Living in County A in Year j} * lcr_{ij} $$")),
                         tags$li(tags$strong("Standardized Incidence Ratio (SIR)"), "for each county")
                     ),
                     fluidRow(withMathJax("$$\\text{SIR for County A in Year j} =\\frac{\\text{Observed Cases in County A in Year j (1)}}{\\text{Expected Cases in County A in Year j (2)}}$$")),
                     tags$h5("SIRs are useful because they have a straightforward interpretation. A value greater than 1 indicates a potential high incidence county or 'hot spot' that may be at particular risk for lung cancer. A value less than 1, on the other hand, indicates a 'cold spot'."),
-                    tags$h5(tags$strong("What is the importance of modeling data?"), "Independence between each possible pair of observations (in this case, an observation is the relative risk or rate of lung cancer in a county for some year) is an assumption made when analyzing data. 
+                    tags$h5(tags$strong("What is the importance of modeling data?"), "Independence between each possible pair of observations (in this case, an observation is the SIR or rate of lung cancer in a county for some year) is an assumption made when analyzing data. 
                             However, this is an unfair assumption because there exist ", tags$strong("three sources of correlations and variation"), "that must be considered in order to accurately understand lung cancer trends:"),
                     tags$ol(
                         tags$li(tags$strong("Spatial"), ": Counties that are close to one another often share socioeconomic traits and topographies."),
@@ -187,7 +190,7 @@ ui <- dashboardPage(skin = "red",
                     withMathJax("$$ log(\\text{RR}_{ij}) = \\alpha + s_i + t_j + \\delta_{ij}  $$"),
                     tags$h5("where ", HTML('&#945') ," is the intercept; s", tags$sub("i"), " represents the spatial effects via a neighborhood matrix and Leroux parameter to determine the spatial dependency of the data; 
                             t", tags$sub("j"), " represents the temporal effects via a markovian random-walk model of order two; ",
-                            HTML('&#948'), tags$sub("ij"), " represents the spatiotemporal effects via a complely random, idependent and identically distributed model."),
+                            HTML('&#948'), tags$sub("ij"), " represents the spatiotemporal effects via a completely random, independent and identically distributed model."),
                     fluidRow(tags$img(height = 2, width = 1500, src = 'black_line.png')),
                     tags$br(),
                     fluidRow(
@@ -247,10 +250,14 @@ ui <- dashboardPage(skin = "red",
                     box(width = 5, plotOutput("poverty"))
                 ),
                 fluidRow(
-                    box(width = 12, height = 5, 
-                        selectInput("cancerType", "Please Select the Histologic Lung Cancer Type(s) to be Investigated:", c("All", "Adenocarcinoma", "Small Cell Carcinoma", "Squamous Cell Carcinoma", "Other Non-Small Cell Carcinomas")))
+                    box(width = 12, 
+                        selectInput("cancerType2", "Please Select the Histologic Lung Cancer Type(s) to be Investigated:", c("All", "Adenocarcinoma", "Small Cell Carcinoma", "Squamous Cell Carcinoma", "Other Non-Small Cell Carcinomas")))
                 ),
-                fluidRow()
+                fluidRow(
+                    box(
+                        dataTableOutput("sociResults")
+                    )
+                )
                 
                 ),
             # Fourth Tab
@@ -599,7 +606,7 @@ server <- function(input, output) {
                 axis.ticks = element_blank(),
                 panel.background = element_blank()
             ) +
-            scale_fill_brewer("Rurality Score", type = "seq", labels = c("Metro area (Population > 1 million)","Metro area (1 million > Population > 250,000)","Metro area (250,000 > Population)","Urban area adjacent to metro area (Population > 20,000)","Urban area NOT adjacent to metro area (Population > 20,000)","Urban area adjacent to metro area (19,999 > Population > 2,500)","Urban area NOT adjacent to metro area (19,999 > Population > 2,500)","Rural area OR (2,500 > Population) adjacent to metro area","Rural area OR (2,500 > Population) NOT adjacent to metro area"))
+            scale_fill_brewer("Rurality Score", type = "seq", palette = 1, direction = -1, labels = c("Metro area (Population > 1 million)","Metro area (1 million > Population > 250,000)","Metro area (250,000 > Population)","Urban area adjacent to metro area (Population > 20,000)","Urban area NOT adjacent to metro area (Population > 20,000)","Urban area adjacent to metro area (19,999 > Population > 2,500)","Urban area NOT adjacent to metro area (19,999 > Population > 2,500)","Rural area OR (2,500 > Population) adjacent to metro area","Rural area OR (2,500 > Population) NOT adjacent to metro area"))
     })
     output$poverty <- renderPlot({
         poverty_data <- data.frame(subset(poverty, Year == input$sociYear))
@@ -610,15 +617,34 @@ server <- function(input, output) {
                   axis.ticks = element_blank(),
                   panel.background = element_blank()
             ) +
-            scale_fill_brewer("Poverty Rate", palette = "PiYG")
+            scale_fill_brewer("Poverty Rate", palette = "RdYlGn", direction = -1)
     })
-    soci_res <- reactive({
-        if (input$cancerType == "All"){data <- countySIRAll}
-        if (input$cancerType == "Adenocarcinoma"){data <- countySIRAdeno}
-        if (input$cancerType == "Small Cell Carcinoma"){data <- countySIRSmall}
-        if (input$cancerType == "Squamous Cell Carcinoma"){data <- countySIRSquamous}
-        if (input$cancerType == "Other Non-Small Cell Carcinomas"){data <- countySIROther}
-        
+   # soci_res <- reactive({
+    #})
+    output$sociResults <- renderDataTable({
+        if (input$cancerType2 == "All"){data <- countySIRAll}
+        if (input$cancerType2 == "Adenocarcinoma"){data <- countySIRAdeno}
+        if (input$cancerType2 == "Small Cell Carcinoma"){data <- countySIRSmall}
+        if (input$cancerType2 == "Squamous Cell Carcinoma"){data <- countySIRSquamous}
+        if (input$cancerType2 == "Other Non-Small Cell Carcinomas"){data <- countySIROther}
+        soci_data <- merge(data, rurality, by = c("County_Code","Year"))
+        soci_data <- merge(soci_data, poverty, by = c("County_Code","Year"))
+        soci_data <- data.frame(soci_data)
+        soci_data$County_Code <- as.factor(soci_data$County_Code)
+        soci_data$idarea <- as.numeric(soci_data$County_Code)
+        soci_data$e <- 1:nrow(soci_data)
+        soci_data$idtime <- 1 + soci_data$Year- min(soci_data$Year)
+        soci_data$Observed <- as.integer(soci_data$Observed)
+        formula <- Observed ~ Rurality_Score + Poverty_Rate +
+            f(idarea, model = "generic1", Cmatrix = mat_c()) + 
+            f(e, model = "iid") + 
+            f(idtime, model = "rw2", constr = T) 
+        soci_res <- inla(formula, 
+             family = "poisson", data = soci_data, E = Expected,
+             control.predictor = list(compute = TRUE), control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE))
+        d <- soci_res$summary.fixed[c("Rurality_Score", "Poverty_Rate"),c("0.025quant", "0.975quant")]
+        d <- cbind(d, c("Rurality Parameter", "Poverty Parameter"))
+        d
     })
 # COVID-19 Dashboard Page 4: Leaflet Plots & Model to Determine Presence of an Association
     output$covid <- renderLeaflet({
