@@ -4,6 +4,7 @@ library(readxl)
 library(ggplot2)
 library(leaflet)
 library(tidyr)
+library(spdep)
 
 #Set working directory to GitHub folder
 setwd("GitHub/cprit_2020/visualizations/dashboard_1")

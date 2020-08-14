@@ -14,11 +14,18 @@ library(ggplot2)
 library(rgdal)
 library(sf)
 library(tidyr)
+#install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 library(INLA)
 library(spdep)
 library(leaflet)
-library(dashboardthemes)
 
+reshape1 <- function(data) {
+    data <- gather(data, key = "Year")
+    data <- subset(data, Year == 1995 | Year == 2000 | Year == 2005 | Year == 2010 | Year == 2015)
+    data <- cbind(data, rep(seq(48001, 48507, by = 2),5))
+    colnames(data) <- c("Year","Rate","County")
+    data
+}
 # Map data
 map_data <- readOGR(dsn = "Texas_Counties")
 # Rates over time (temporal trend data for general page)
@@ -27,35 +34,36 @@ ratesDataAdeno <- read_excel("rates_data.xlsx", sheet = 2)
 ratesDataSmall <- read_excel("rates_data.xlsx", sheet = 3)
 ratesDataSquamous <- read_excel("rates_data.xlsx", sheet = 4)
 ratesDataOtherNonSmall <- read_excel("rates_data.xlsx", sheet = 5)
-# Rates for different counties (spatial trend for general page)
-countyRatesAll <- read_excel("rates_county.xlsx", sheet = 1)
-countyRatesAdeno <- read_excel("rates_county.xlsx", sheet = 2)
-countyRatesSmall <- read_excel("rates_county.xlsx", sheet = 3)
-countyRatesSquamous <- read_excel("rates_county.xlsx", sheet = 4)
-countyRatesOtherNonSmall <- read_excel("rates_county.xlsx", sheet = 5)
-# Rates for different counties for ALL years (county-level analysis on INLA page)
+# Rates for different counties for All Years (county-level analysis on INLA page)
 check_SIRAll <- read_excel("county_rates_all_years.xlsx", sheet = 1)
 check_SIRAdeno <- read_excel("county_rates_all_years.xlsx", sheet = 2)
 check_SIRSmall <- read_excel("county_rates_all_years.xlsx", sheet = 3)
 check_SIRSquamous <- read_excel("county_rates_all_years.xlsx", sheet = 4)
 check_SIROther <- read_excel("county_rates_all_years.xlsx", sheet = 5)
-#SIR data by county (5-Year Intervals)
-countySIRAll <- read_excel("county_sir_data.xlsx", sheet = 1)
-countySIRAdeno <- read_excel("county_sir_data.xlsx", sheet = 2)
-countySIRSmall <- read_excel("county_sir_data.xlsx", sheet = 3)
-countySIRSquamous <- read_excel("county_sir_data.xlsx", sheet = 4)
-countySIROther <- read_excel("county_sir_data.xlsx", sheet = 5)
-#SIR data by county for all years
+# Rates for different counties (spatial trend for general page)
+countyRatesAll <- reshape1(check_SIRAll)
+countyRatesAdeno <- reshape1(check_SIRAdeno)
+countyRatesSmall <- reshape1(check_SIRSmall)
+countyRatesSquamous <- reshape1(check_SIRSquamous)
+countyRatesOtherNonSmall <- reshape1(check_SIROther)
+#SIR data by county (All Years)
 countyAllYearsSIRAll <- read_excel("all_years_by_hist.xlsx", sheet = 1)
 countyAllYearsSIRAdeno <- read_excel("all_years_by_hist.xlsx", sheet = 2)
 countyAllYearsSIRSmall <- read_excel("all_years_by_hist.xlsx", sheet = 3)
 countyAllYearsSIRSquamous <- read_excel("all_years_by_hist.xlsx", sheet = 4)
 countyAllYearsSIROther <- read_excel("all_years_by_hist.xlsx", sheet = 5)
+#SIR data by county (5-Year Intervals)
+countySIRAll <- subset(countyAllYearsSIRAll, Year == 1995 | Year == 2000 | Year == 2005 | Year == 2010 | Year == 2015)
+countySIRAdeno <- subset(countyAllYearsSIRAdeno, Year == 1995 | Year == 2000 | Year == 2005 | Year == 2010 | Year == 2015)
+countySIRSmall <- subset(countyAllYearsSIRSmall, Year == 1995 | Year == 2000 | Year == 2005 | Year == 2010 | Year == 2015)
+countySIRSquamous <- subset(countyAllYearsSIRSquamous, Year == 1995 | Year == 2000 | Year == 2005 | Year == 2010 | Year == 2015)
+countySIROther <- subset(countyAllYearsSIROther, Year == 1995 | Year == 2000 | Year == 2005 | Year == 2010 | Year == 2015)
 #Socioeconomic Data
 rurality <- read_excel("socioeconomic_data.xlsx", sheet = 1)
 poverty <- read_excel("socioeconomic_data.xlsx", sheet = 2)
 
-# UI main dashboard
+### UI main dashboard ###
+
 ui <- dashboardPage(skin = "red", 
     dashboardHeader(title = "Lung Cancer in Texas"),
     # Sidebar Content
@@ -102,7 +110,7 @@ ui <- dashboardPage(skin = "red",
                     HTML('<center><img src="hist_types.png" width="550" height="200"></center>'),
                     tags$br(),
                     tags$h5("As shown above, carcinomas (cancer forms in the skin/ tissue cells lining internal organs) are far more common than 
-                            sarcomas (forms in connective tissue cells like fat and blood vessels). Most carcinomas are non-small cell; adenocarcinomas 
+                            sarcomas (forms in connective tissue cells like fat and blood vessels). Most carcinomas are non-small cell with adenocarcinomas 
                             and squamous cell carcinomas are the two most common histologic types classified under this category."),
                     tags$br(),
                     tags$h4(tags$b("Using the Dashboard")),
@@ -144,13 +152,13 @@ ui <- dashboardPage(skin = "red",
                     ),
                     fluidRow(
                         box(
-                            title = "Inputs for Temporal Plots Below", status = "warning", solidHeader = TRUE, width = 12,
+                            title = "Temporal Trends Analysis", status = "warning", solidHeader = TRUE, width = 12,
                             checkboxGroupInput("gender", "Please Select Gender(s):", c("Male","Female")),
                             checkboxGroupInput("age", "Please Select Age Group(s):", c("<55 Years","55-74 Years", "75+ Years"))
                         )),
                     fluidRow(
                         tabBox(
-                            title = "Lung Cancer Rates per 100k in Texas Over Time by Age, Gender & Histologic Type",
+                            title = "Lung Cancer Rates per 100k Texans Over Time by Age, Gender & Histologic Type",
                             id = "generalplot", width = 12,
                             tabPanel("All", plotOutput("allRatesPlot")),
                             tabPanel("Adenocarcinoma", plotOutput("adenoRatesPlot")),
@@ -167,16 +175,18 @@ ui <- dashboardPage(skin = "red",
             tabItem(tabName = "sir",
                     tags$h5("This ", tags$strong("SIR Plots & INLA Modeling "), "page of the dashboard visualizes the spatiotemporal 
                             relationships of both the", tags$strong("observed and modeled"), "lung cancer data for the four histologic types for the following three metrics:"),
+                    fluidRow(tags$img(height = 2, width = 1500, src = 'black_line.png')),
                     tags$ol(
                         tags$li(tags$strong("Observed"),"(true) number of lung cancer cases"), 
                         tags$li(tags$strong("Expected"), "number of lung cancer cases (calculated using census data)", tags$sup("1")), 
-                        fluidRow(tags$h5("Texas' population was divided into 30 demographic groups by gender, race, and age. Each was assumed to have its own unique rate of lung cancer. 
-                                         2 Genders (Male & Female) x 5 Race Groups (White, Black, Asian/ Pacific Islander, American Indian & Hispanic) x 3 Age Groups (<54 years, 55-74 years, 75+ years) = 30 Demographic Groups")),
-                        fluidRow(withMathJax("Assuming these 30 demographic groups in Texas, expected cases are calculated by the following formulas: $$lcr_{ij} \\text{ (Lung Cancer Rate for Demographic i in Year j)} = \\frac{\\text{Number of People of Demographic i Diagnosed with Lung Cancer in Year j in All TX}}{\\text{Number of People of Demographic i Living in TX in Year j}} $$")),
-                        fluidRow(withMathJax("$$\\text{Expected Cases in County A in Year j} = \\sum_{i=1}^{30} \\text{Number of People of Demographic i Living in County A in Year j} * lcr_{ij} $$")),
+                        fluidRow(tags$h5("Texas' population was divided into 30 demographic groups (2 Genders [Male & Female] x 5 Race Groups [White, Black, Asian/ Pacific Islander, American Indian & Hispanic)] x 3 Age Groups [<54 years, 55-74 years, 75+ years]). 
+                        Each was assumed to have its own unique rate of lung cancer.")),
+                        fluidRow(withMathJax("Expected cases are calculated by the following formulas where", tags$i("i"), "represents 'in county i', ", tags$i("k"), "represents 'for demographic group k', and ", tags$i("j"), "represents 'in year j': 
+                                             $$\\text{State LC Rate}_{kj} = \\frac{\\text{n of Texans Diagnosed with LC}_{kj}}{\\text{n of Texans}_{kj}}$$")),
+                        fluidRow(withMathJax("$$\\text{Expected Cases}_{ij} = \\sum_{k=1}^{30} \\text{n of Texans}_{kij} * \\text{State LC Rate}_{kj} $$")),
                         tags$li(tags$strong("Standardized Incidence Ratio (SIR)"), "for each county")
                     ),
-                    fluidRow(withMathJax("$$\\text{SIR for County A in Year j} =\\frac{\\text{Observed Cases in County A in Year j (1)}}{\\text{Expected Cases in County A in Year j (2)}}$$")),
+                    fluidRow(withMathJax("$$SIR_{ij} =\\frac{\\text{Observed Cases}_{ij}}{\\text{Expected Cases}_{ij}}$$")),
                     tags$h5("SIRs are useful because they have a straightforward interpretation. A value greater than 1 indicates a potential high incidence county or 'hot spot' that may be at particular risk for lung cancer. A value less than 1, on the other hand, indicates a 'cold spot'."),
                     tags$h5(tags$strong("What is the importance of modeling data?"), "Independence between each possible pair of observations (in this case, an observation is the SIR or rate of lung cancer in a county for some year) is an assumption made when analyzing data. 
                             However, this is an unfair assumption because there exist ", tags$strong("three sources of correlations and variation"), "that must be considered in order to accurately understand lung cancer trends:"),
@@ -190,7 +200,7 @@ ui <- dashboardPage(skin = "red",
                             It was implemented through the R-INLA", tags$sup("4"), "software by the methods outlined in both Moraga", tags$sup("5"), " and Rubio-Gomez V", tags$sup("6"), "."),
                     tags$h5("The data was modeled by a ", tags$strong("Poisson Distribution"), " (below), which requires one parameter,  ", HTML('&#955'), ". "),
                     HTML('<center><img src="poisson.png" width="250" height="175"></center>'),
-                    withMathJax("For County i in Year j: $$\\text{Observed LC Cases}_{ij} \\sim \\text{Poisson}(\\text{Expected LC Cases}_{ij}*\\text{RR}_{ij})$$"),
+                    withMathJax("where", tags$i("i"), "represents 'in county i' and ", tags$i("j"), "represents 'in year j': $$\\text{Observed LC Cases}_{ij} \\sim \\text{Poisson}(\\text{Expected LC Cases}_{ij}*\\text{RR}_{ij})$$"),
                     withMathJax("$$ log(\\text{RR}_{ij}) = \\alpha + s_i + t_j + \\delta_{ij}  $$"),
                     tags$h5("where ", HTML('&#945') ," is the intercept; s", tags$sub("i"), " represents the spatial effects via a neighborhood matrix and Leroux parameter to determine the spatial dependency of the data; 
                             t", tags$sub("j"), " represents the temporal effects via a markovian random-walk model of order two; ",
@@ -205,7 +215,7 @@ ui <- dashboardPage(skin = "red",
                         )),
                     fluidRow(
                         tabBox(
-                            title = "Plots of Modeled Risk to and Observed Rates of Lung Cancer in Texas Between 1995 and 2015",
+                            title = "Modeled Risk to and Observed Cases/ Expected Cases/ SIR's of Lung Cancer in Texas Between 1995 and 2015",
                             id = "sirs", width = 12,
                             tabPanel("County-level Relative Risk (based on SIR) After INLA Smoothing via a Bernardinelli Model", plotOutput("inlaPlot")),
                             tabPanel("Observed, Expected, and SIR Data without Modeling/ Smoothing", plotOutput("rawPlot"))
@@ -218,7 +228,8 @@ ui <- dashboardPage(skin = "red",
                         )),
                     fluidRow(
                         box(
-                            plotOutput("map")),
+                            plotOutput("map")
+                            ),
                        box(
                             plotOutput("timeResults"))
                     ),
@@ -245,25 +256,66 @@ ui <- dashboardPage(skin = "red",
                 ),
             # Third Tab
             tabItem(tabName = "covar",
+                tags$h5("This ", tags$strong("Socioeconomic Associations"), "page of the dashboard investigates the existence of potential associations
+                        between county-level characteristics (rurality", tags$sup("1, 2"), "and poverty", tags$sup("3"), ") and different lung cancer histologic types."),
+                fluidRow(tags$img(height = 2, width = 1500, src = 'black_line.png')),
                 fluidRow(
                     box(width = 12,
                     sliderInput(inputId = "sociYear", label = NULL, value = 2000, min = 1995, max = 2015, step = 5, sep = ""))
                 ),
                 fluidRow(
-                    box(width = 7, plotOutput("rurality")),
-                    box(width = 5, plotOutput("poverty"))
+                    box(width = 7, 
+                        plotOutput("rurality")
+                    ),
+                    box(width = 5, 
+                        plotOutput("poverty")
+                    )
+                ),
+                tags$h5("It would be of interest to incorporate the county traits above into a model so that it has as much information as possible to most accurately predict relative risk."),
+                withMathJax("where", tags$i("i"), "represents 'in county i' and ", tags$i("j"), "represents 'in year j': $$\\text{Observed LC Cases}_{ij} \\sim \\text{Poisson}(\\text{Expected LC Cases}_{ij}*\\text{RR}_{ij})$$"),
+                withMathJax("$$ log(\\text{RR}_{ij}) = \\alpha + \\beta_1*Rurality_{ij} + \\beta_2*Poverty_{ij} + s_i + t_j + \\delta_{ij}  $$"),
+                tags$h5("More information about how this model was constructed can be found under the ", tags$strong("SIR Plots & INLA Modeling page"), ". 
+                        The map of Texas below shows the new relative risk for the selected year and selected histologic type based on this model."),
+                fluidRow(
+                    box(width = 6,
+                        radioButtons("cancerType2", "Please Select the Histologic Lung Cancer Type(s) to be Investigated:", c("All", "Adenocarcinoma", "Small Cell Carcinoma", "Squamous Cell Carcinoma", "Other Non-Small Cell Carcinomas")),
+                        tags$br(),
+                        tags$br(),
+                        tags$h5("If there is no relationship between a county characteristic and a certain histologic type of lung cancer, this will be reflected by the distribution of that trait's parameter. 
+                                For example, if small cell carcinoma is selected, and the distribution for", HTML('&#946'), tags$sub("1"), " indicates that it has a high probability of being 0, then it's likely that there's no 
+                                association between a county's rurality and its rate of small cell carcinoma in Texas. ", tags$strong("These distributions and their respective summary statistics (based on the model defined above) are below."))
+                    ),
+                    box(width = 6,
+                        plotOutput("sociCountyRisk")
+                    )
                 ),
                 fluidRow(
                     box(width = 12, 
-                        selectInput("cancerType2", "Please Select the Histologic Lung Cancer Type(s) to be Investigated:", c("All", "Adenocarcinoma", "Small Cell Carcinoma", "Squamous Cell Carcinoma", "Other Non-Small Cell Carcinomas")))
+                        dataTableOutput("sociResults")
+                    )
                 ),
                 fluidRow(
                     box(
-                        dataTableOutput("sociResults")
+                        plotOutput("ruralMarginal")
+                    ),
+                    box(
+                        plotOutput("povertyMarginal")
                     )
-                )
-                
                 ),
+                fluidRow(tags$img(height = 2, width = 1500, src = 'black_line.png')),
+                tags$h5(tags$sup("1"), "United States Department of Agriculture Economic Research Service. ",
+                        a("ERS Rural-Urban Continuum Codes (RUCC). ",
+                          href = "https://www.ers.usda.gov/data-products/rural-urban-continuum-codes.aspx#.UYJuVEpZRvY"), "1993, 2003, 2013."
+                ),
+                tags$h5(tags$sup("2"), "Method of Using RUCC for Rurality Data: Houston KA, Mitchell KA, King J, White A, Ryan BM. ",
+                        a("Histologic Lung Cancer Incidence Rates and Trends Vary by Race/Ethnicity and Residential County. ",
+                          href = "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5884169/"), "J Thorac Oncol. 2018; 13(4):497-509. doi:10.1016/j.jtho.2017.12.010"
+                ),
+                tags$h5(tags$sup("3"), "U.S. Census Bureau. ",
+                        a("Historical County Level Poverty Estimates Tool. ",
+                          href = "https://www.census.gov/library/visualizations/time-series/demo/census-poverty-tool.html"), "1960-2010."
+                )
+            ),
             # Fourth Tab
             tabItem(tabName = "covid",
                 tags$h5("This", tags$strong("COVID-19 and Lung Cancer"), "page contains side-by-side plots comparing the relative rates of lung cancer and the recent COVID-19 epidemic that has been significantly straining Texas hospital resources. It is hypothesized that COVID-19 can have adverse effects on peoples' lungs, so when determining", tags$strong("health funding"), ", it's essential to consider these two diseases in relation to one another."),
@@ -282,104 +334,64 @@ ui <- dashboardPage(skin = "red",
                     box(width = 6, leafletOutput("covid")),
                     box(width = 6, leafletOutput("lung_cancer"))
                 ),
-                tags$h5("A subject of interest would be to determine whether there is a relationship between how counties (specifically their health systems) are affected by COVID-19 and how they are affected by lung cancer. In order to investigate the potential associations, two spatial models were constructed:"),
-                tags$strong("Model 1: Lung Cancer Death Rates per 100k as Response Variable"),
-                withMathJax("For County i in Year j: $$\\text{Observed LC Cases}_{ij} \\sim \\text{Poisson}(\\text{Expected LC Cases}_{ij}*\\text{RR}_{ij})$$"),
-                withMathJax("$$ log(\\text{RR}_{ij}) = \\alpha + s_i + t_j + \\delta_{ij}  $$"),
-                tags$h5("where ", HTML('&#945') ," is the intercept; s", tags$sub("i"), " represents the spatial effects via a neighborhood matrix and Leroux parameter to determine the spatial dependency of the data; 
-                            t", tags$sub("j"), " represents the temporal effects via a markovian random-walk model of order two; ",
-                        HTML('&#948'), tags$sub("ij"), " represents the spatiotemporal effects via a complely random, idependent and identically distributed model."),
+                tags$h5("A subject of interest would be to determine whether there is a relationship between how counties 
+                        are affected by COVID-19 and how they are affected by lung cancer. There has been literature suggesting 
+                        COVID-19 has an effect on lung cancer outcomes", tags$sup("2, 3"), "as well as that it doesn't", tags$sup("4"), ". 
+                        In order to investigate the potential associations, two spatial models were constructed for, respectively, the two lung cancer metrics above. Both models are based 
+                        on whichever COVID-19 metric has been selected. The model descriptions as well as the distributions of the parameter are below. If there's a high
+                        likelihood that the parameter is 0, then there's likely no association between the COVID-19 and lung cancer indicators of that model"),
+                tags$strong("Model 1: Cumulative Lung Cancer Death Rate (Over the Time Period 1995-2017) as Response Variable"),
+                tags$h5(withMathJax("For County i in Texas: $$\\text{Cumulative LC Death Rate}_{i} \\sim \\text{Poisson}(\\alpha + \\beta_1*COVID_i + s_i + \\delta_i)$$")),
+                tags$h5("where ", HTML('&#945') , " is the intercept and represents the base LC death rate for any county in Texas; ",
+                        HTML('&#946'), tags$sub("1"), " is the COVID-19 parameter and represents the change in LC death rate for each increase of 1 by the COVID-19 metric; ",
+                        " COVID", tags$sub("i"), " is the metric for COVID-19 selected above (either incidence or death rate); ",
+                        "s", tags$sub("i"), " represents the spatial effects via a neighborhood matrix and Leroux parameter to determine the spatial dependency of the data; ", 
+                        HTML('&#948'), tags$sub("i"), " represents any random effects via a random, independent and identically distributed model."),
                 fluidRow(
-                    plotOutput("model1"),
+                    plotOutput("model1")),
+                tags$strong("Model 2: Frequency of Confirmed Lung Cancer Diagnoses in 2017 as Response Variable"),
+                tags$h5(withMathJax("For County i in Texas in 2017: $$\\text{Number of Diagnosed LC Cases}_{i} \\sim \\text{Poisson}(\\text{Expected LC Cases}_i*\\theta_i)$$")),
+                tags$h5(withMathJax("$$log(\\theta_i) = \\alpha + \\beta_1*COVID_i + s_i + \\delta_i$$")),
+                tags$h5("where ", HTML('&#952'), tags$sub("i"), "is the relative risk of lung cancer in county i; ",
+                        HTML('&#945') , " is the intercept and represents the base LC death rate for any county in Texas; ",
+                        HTML('&#946'), tags$sub("1"), " is the COVID-19 parameter and represents the change in LC death rate for each increase of 1 by the COVID-19 metric; ",
+                        " COVID", tags$sub("i"), " is the metric for COVID-19 selected above (either incidence or death rate); ",
+                        "s", tags$sub("i"), " represents the spatial effects via a neighborhood matrix and Leroux parameter to determine the spatial dependency of the data; ", 
+                        HTML('&#948'), tags$sub("i"), " represents any random effects via a random, independent and identically distributed model."),                
+                fluidRow(
                     plotOutput("model2")
+                ),
+                tags$h5("More information about how the models were constructed can be found under the ", tags$strong("SIR Plots & INLA Modeling page")),
+                fluidRow(tags$img(height = 2, width = 1500, src = 'black_line.png')),
+                tags$h5(tags$sup("1"), "Texas Department of State Health Services. ",
+                        a("Texas COVID-19 Data: Accessible Dashboard Data.",
+                          href = "https://dshs.texas.gov/coronavirus/additionaldata.aspx")
+                ),
+                tags$h5(tags$sup("2"), "The Lancet Oncology.",
+                        a("COVID-19: global consequences for oncology.",
+                          href = "https://www.thelancet.com/journals/lanonc/article/PIIS1470-2045(20)30175-3/fulltext"), "Lancet Oncol 2020; 21: 467"
+                ),
+                tags$h5(tags$sup("3"), "Yang K, Sheng Y, Huang C, Xiong N, Jieng K, Lu H. ",
+                        a("COVID-19: global consequences for oncology.",
+                          href = "https://www.thelancet.com/journals/lanonc/article/PIIS1470-2045(20)30310-7/fulltext"), "Lancet Oncol; Published online May 29, 2020. "
+                ),
+                tags$h5(tags$sup("4"), "Lee L, Cazier JB, et al. ",
+                        a("COVID-19 mortality in patients with cancer on chemotherapy or other anticancer treatments: a prospective cohort study. ",
+                          href = "https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(20)31173-9/fulltext"), "Lancet; published online May 28, 2020. DOI: https://doi.org/10.1016/S0140-6736(20)31173-9"
                 )
             )
         )
     )
 )
-# Server
-server <- function(input, output) {
-# General Dashboard Page 1: Rates over Time for Each Histologic Type
-    output$allRatesPlot <- renderPlot({
-        y <- rep(0,21)
-        for (j in input$gender){
-            for (k in input$age){
-                for (p in colnames(ratesDataAll)){
-                    if (paste(j,k) == p){
-                        y <- y + ratesDataAll[[p]]
-                    }
-                }
-            }
-        }
-        x <- c(1995:2015)
-        plot(x,y, xlab ="Year",ylab="Rate per 100k People in Texas",col="red")
-        lines(lowess(y~x,f=0.6),col = "blue")
 
-    })
-    output$adenoRatesPlot <- renderPlot({
-        y <- rep(0,21)
-        for (j in input$gender){
-            for (k in input$age){
-                for (p in colnames(ratesDataAdeno)){
-                    if (paste(j,k) == p){
-                        y <- y + ratesDataAdeno[[p]]
-                    }
-                }
-            }
-        }
-        x <- c(1995:2015)
-        plot(x,y, xlab ="Year",ylab="Rate per 100k People in Texas",col="red")
-        lines(lowess(y~x,f=0.6),col = "blue")
-    })
-    output$smallRatesPlot <- renderPlot({
-        y <- rep(0,21)
-        for (j in input$gender){
-            for (k in input$age){
-                for (p in colnames(ratesDataSmall)){
-                    if (paste(j,k) == p){
-                        y <- y + ratesDataSmall[[p]]
-                    }
-                }
-            }
-        }
-        x <- c(1995:2015)
-        plot(x,y, xlab ="Year",ylab="Rate per 100k People in Texas",col="red")
-        lines(lowess(y~x,f=0.6),col = "blue")
-    })
-    output$squamousRatesPlot <- renderPlot({
-        y <- rep(0,21)
-        for (j in input$gender){
-            for (k in input$age){
-                for (p in colnames(ratesDataSquamous)){
-                    if (paste(j,k) == p){
-                        y <- y + ratesDataSquamous[[p]]
-                    }
-                }
-            }
-        }
-        x <- c(1995:2015)
-        plot(x,y, xlab ="Year",ylab="Rate per 100k People in Texas",col="red")
-        lines(lowess(y~x,f=0.6),col = "blue")
-    })
-    output$nonsmallRatesPlot <- renderPlot({
-        y <- rep(0,21)
-        for (j in input$gender){
-            for (k in input$age){
-                for (p in colnames(ratesDataOtherNonSmall)){
-                    if (paste(j,k) == p){
-                        y <- y + ratesDataOtherNonSmall[[p]]
-                    }
-                }
-            }
-        }
-        x <- c(1995:2015)
-        plot(x,y, xlab ="Year",ylab="Rate per 100k People in Texas",col="red")
-        lines(lowess(y~x,f=0.6),col = "blue")
-    })
-# General Dashboard Page 1: Rates Across Texas Counties for Each Histologic Type
-    output$allCountyRatesPlot <- renderPlot({
-        countyRatesAll <- data.frame(countyRatesAll)
-        wide <- reshape(countyRatesAll,
+### Server ###
+
+server <- function(input, output) {
+# General Dashboard Page 1: Rates Across Texas Counties by Each Histologic Type (Spatial)
+    plot1 <- function(data) {
+        data <- data.frame(data)
+        m <- round((quantile(data$Rate, c(0.025,0.975))[2] - quantile(data$Rate, c(0.025,0.975))[1])/11)
+        wide <- reshape(data,
                         timevar = "Year",
                         idvar = "County",
                         direction = "wide")
@@ -387,7 +399,7 @@ server <- function(input, output) {
         tx_data_map_sf <- st_as_sf(tx_data_map)
         tx_data_map_sf <- gather(tx_data_map_sf, Year, Rate, paste0("Rate.", c(1995, 2000, 2005, 2010, 2015)))
         tx_data_map_sf$Year <- as.integer(substring(tx_data_map_sf$Year, 6, 9))
-        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(Rate,8))) +
+        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(Rate,m))) +
             facet_wrap(~Year, dir = "h", ncol = 3) +
             theme_bw() +
             theme(line = element_blank(),
@@ -396,88 +408,64 @@ server <- function(input, output) {
                   panel.background = element_blank()
             ) +
             scale_fill_brewer("Rate per 100k People", palette = "OrRd")
+    }    
+    output$allCountyRatesPlot <- renderPlot({
+        plot1(countyRatesAll)
     })
     output$adenoCountyRatesPlot <- renderPlot({
-        countyRatesAdeno <- data.frame(countyRatesAdeno)
-        wide <- reshape(countyRatesAdeno,
-                        timevar = "Year",
-                        idvar = "County",
-                        direction = "wide")
-        tx_data_map <- merge(map_data, wide, by.x = "FIPS_ST_CN", by.y = "County")
-        tx_data_map_sf <- st_as_sf(tx_data_map)
-        tx_data_map_sf <- gather(tx_data_map_sf, Year, Rate, paste0("Rate.", c(1995, 2000, 2005, 2010, 2015)))
-        tx_data_map_sf$Year <- as.integer(substring(tx_data_map_sf$Year, 6, 9))
-        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(Rate,4))) +
-            facet_wrap(~Year, dir = "h", ncol = 3) +
-            theme_bw() +
-            theme(line = element_blank(),
-                  axis.text = element_blank(),
-                  axis.ticks = element_blank(),
-                  panel.background = element_blank()
-            ) +
-            scale_fill_brewer("Rate per 100k People", palette = "OrRd")
+        plot1(countyRatesAdeno)
     })
     output$smallCountyRatesPlot <- renderPlot({
-        countyRatesSmall <- data.frame(countyRatesSmall)
-        wide <- reshape(countyRatesSmall,
-                        timevar = "Year",
-                        idvar = "County",
-                        direction = "wide")
-        tx_data_map <- merge(map_data, wide, by.x = "FIPS_ST_CN", by.y = "County")
-        tx_data_map_sf <- st_as_sf(tx_data_map)
-        tx_data_map_sf <- gather(tx_data_map_sf, Year, Rate, paste0("Rate.", c(1995, 2000, 2005, 2010, 2015)))
-        tx_data_map_sf$Year <- as.integer(substring(tx_data_map_sf$Year, 6, 9))
-        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(Rate,3))) +
-            facet_wrap(~Year, dir = "h", ncol = 3) +
-            theme_bw() +
-            theme(line = element_blank(),
-                  axis.text = element_blank(),
-                  axis.ticks = element_blank(),
-                  panel.background = element_blank()
-            ) +
-            scale_fill_brewer("Rate per 100k People", palette = "OrRd")
+        plot1(countyRatesSmall)
     })
     output$squamousCountyRatesPlot <- renderPlot({
-        countyRatesSquamous <- data.frame(countyRatesSquamous)
-        wide <- reshape(countyRatesSquamous,
-                        timevar = "Year",
-                        idvar = "County",
-                        direction = "wide")
-        tx_data_map <- merge(map_data, wide, by.x = "FIPS_ST_CN", by.y = "County")
-        tx_data_map_sf <- st_as_sf(tx_data_map)
-        tx_data_map_sf <- gather(tx_data_map_sf, Year, Rate, paste0("Rate.", c(1995, 2000, 2005, 2010, 2015)))
-        tx_data_map_sf$Year <- as.integer(substring(tx_data_map_sf$Year, 6, 9))
-        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(Rate,4))) +
-            facet_wrap(~Year, dir = "h", ncol = 3) +
-            theme_bw() +
-            theme(line = element_blank(),
-                  axis.text = element_blank(),
-                  axis.ticks = element_blank(),
-                  panel.background = element_blank()
-            ) +
-            scale_fill_brewer("Rate per 100k People", palette = "OrRd")
+        plot1(countyRatesSquamous)
     })
     output$nonsmallCountyRatesPlot <- renderPlot({
-        countyRatesOtherNonSmall <- data.frame(countyRatesOtherNonSmall)
-        wide <- reshape(countyRatesOtherNonSmall,
-                        timevar = "Year",
-                        idvar = "County",
-                        direction = "wide")
-        tx_data_map <- merge(map_data, wide, by.x = "FIPS_ST_CN", by.y = "County")
-        tx_data_map_sf <- st_as_sf(tx_data_map)
-        tx_data_map_sf <- gather(tx_data_map_sf, Year, Rate, paste0("Rate.", c(1995, 2000, 2005, 2010, 2015)))
-        tx_data_map_sf$Year <- as.integer(substring(tx_data_map_sf$Year, 6, 9))
-        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(Rate,3))) +
-            facet_wrap(~Year, dir = "h", ncol = 3) +
-            theme_bw() +
-            theme(line = element_blank(),
-                  axis.text = element_blank(),
-                  axis.ticks = element_blank(),
-                  panel.background = element_blank()
-            ) +
-            scale_fill_brewer("Rate per 100k People", palette = "OrRd")
+        plot1(countyRatesOtherNonSmall)
     })
+    
+# General Dashboard Page 1: Rates over Time by Each Histologic Type
+    plot2 <- function(data){
+        y <- rep(0,21)
+        for (j in input$gender){
+            for (k in input$age){
+                for (p in colnames(data)){
+                    if (paste(j,k) == p){
+                        y <- y + data[[p]]
+                    }
+                }
+            }
+        }
+        x <- c(1995:2015)
+        plot(x,y, xlab ="Year",ylab="Rate per 100k People in Texas",col="red")
+        lines(lowess(y~x,f=0.6),col = "blue")
+    }
+    output$allRatesPlot <- renderPlot({
+        plot2(ratesDataAll)
+    })
+    output$adenoRatesPlot <- renderPlot({
+        plot2(ratesDataAdeno)
+    })
+    output$smallRatesPlot <- renderPlot({
+        plot2(ratesDataSmall)
+    })
+    output$squamousRatesPlot <- renderPlot({
+        plot2(ratesDataSquamous)
+    })
+    output$nonsmallRatesPlot <- renderPlot({
+        plot2(ratesDataOtherNonSmall)
+    })
+    
 # SIR & INLA Dashboard Page 2: SIR data alone as well as with INLA smoothing
+    assignInput <- function(input){
+        if (input == "All"){data5 <- countySIRAll}
+        if (input == "Adenocarcinoma"){data5 <- countySIRAdeno}
+        if (input == "Small Cell Carcinoma"){data5 <- countySIRSmall}
+        if (input == "Squamous Cell Carcinoma"){data5 <- countySIRSquamous}
+        if (input == "Other Non-Small Cell Carcinomas"){data5 <- countySIROther}
+        data5
+    }
     #Matrix required for Leroux model
     mat_c <- reactive({
         tx_nb <- poly2nb(map_data)
@@ -490,23 +478,31 @@ server <- function(input, output) {
     })
     #Plot of SIR, Observed cases, or Expected cases across the state of Texas
     output$rawPlot <- renderPlot({
-        if (input$cancerType == "All"){data <- countySIRAll}
-        if (input$cancerType == "Adenocarcinoma"){data <- countySIRAdeno}
-        if (input$cancerType == "Small Cell Carcinoma"){data <- countySIRSmall}
-        if (input$cancerType == "Squamous Cell Carcinoma"){data <- countySIRSquamous}
-        if (input$cancerType == "Other Non-Small Cell Carcinomas"){data <- countySIROther}
-        county_data <- data.frame(data)
-        inp <- toString(input$dataType)
+        #if (input$cancerType == "All"){data <- countySIRAll}
+        #if (input$cancerType == "Adenocarcinoma"){data <- countySIRAdeno}
+        #if (input$cancerType == "Small Cell Carcinoma"){data <- countySIRSmall}
+        #if (input$cancerType == "Squamous Cell Carcinoma"){data <- countySIRSquamous}
+        #if (input$cancerType == "Other Non-Small Cell Carcinomas"){data <- countySIROther}
+        data5 <- assignInput(input$cancerType)
+        county_data <- data.frame(data5)
+        marker = input$dataType
+        if (input$cancerType == "All" | input$cancerType == "Adenocarcinoma"){
+            m <- 7
+        }
+        if (input$cancerType == "Small Cell Carcinoma" | input$cancerType == "Squamous Cell Carcinoma" | input$cancerType == "Other Non-Small Cell Carcinomas"){
+            m <- 3
+        }
+        inp <- marker
         n <- nchar(inp)
         wide <- reshape(county_data,
-                             timevar = "Year",
-                             idvar = "County_Code",
-                             direction = "wide")
+                        timevar = "Year",
+                        idvar = "County_Code",
+                        direction = "wide")
         tx_data_map <- merge(map_data, wide, by.x = "FIPS_ST_CN", by.y = "County_Code")  
         tx_data_map_sf <- st_as_sf(tx_data_map)
-        tx_data_map_sf <- gather(tx_data_map_sf, Year, inp, paste0(inp,".", c(1995, 2000, 2005, 2010, 2015)))
+        tx_data_map_sf <- gather(tx_data_map_sf, Year, marker, paste0(marker,".", c(1995, 2000, 2005, 2010, 2015)))
         tx_data_map_sf$Year <- as.integer(substring(tx_data_map_sf$Year, (n+2), (n+5)))
-        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(inp, 5))) +
+        ggplot(tx_data_map_sf) + geom_sf(aes(fill = cut_number(marker, m))) +
             facet_wrap(~Year, dir = "h", ncol = 3) +
             theme_bw() +
             theme(line = element_blank(),
@@ -515,6 +511,8 @@ server <- function(input, output) {
                   panel.background = element_blank()
             ) +
             scale_fill_brewer(inp, palette = "OrRd")
+        
+
     })
     # Reactive results objects from running INLA model on 21 data points
     res <- reactive({
@@ -567,20 +565,23 @@ server <- function(input, output) {
             scale_fill_gradient2(midpoint = 1, low = "blue", mid = "white", high = "red")       
     }) 
     output$timeResults <- renderPlot({
-        if (input$cancerType == "All"){data <- countyAllYearsSIRAll} 
-        if (input$cancerType == "Adenocarcinoma"){data <- countyAllYearsSIRAdeno}
-        if (input$cancerType == "Small Cell Carcinoma"){data <- countyAllYearsSIRSmall}
-        if (input$cancerType == "Squamous Cell Carcinoma"){data <- countyAllYearsSIRSquamous}
-        if (input$cancerType == "Other Non-Small Cell Carcinomas"){data <- countyAllYearsSIROther}
+        if (input$cancerType == "All"){data <- countyAllYearsSIRAll; ratesData <- check_SIRAll} 
+        if (input$cancerType == "Adenocarcinoma"){data <- countyAllYearsSIRAdeno; ratesData <- check_SIRAdeno}
+        if (input$cancerType == "Small Cell Carcinoma"){data <- countyAllYearsSIRSmall; ratesData <- check_SIRSmall}
+        if (input$cancerType == "Squamous Cell Carcinoma"){data <- countyAllYearsSIRSquamous; ratesData <- check_SIRSquamous}
+        if (input$cancerType == "Other Non-Small Cell Carcinomas"){data <- countyAllYearsSIROther; ratesData <- check_SIROther}
         county_data <- data.frame(data)
         code <- as.integer(subset(map_data@data, CNTY_NM == input$countyChoice)["FIPS_ST_CN"])
         step_size <- (code-48000+1)*0.5
         index <- seq(step_size,(20*254+step_size),254)
         rr <- res()$summary.fitted.values[index, 'mean']
         sir <- county_data$SIR[index]
-        plot(1995:2015, sir, col = "blue", type = "b", pch = 19, xlab = "Year", ylab = "SIR and Relative Risk")
+        rates <- ratesData[step_size, ]
+        rates <- rates/(max(rates))
+        plot(1995:2015, sir, col = "blue", type = "b", pch = 19, xlab = "Year", ylab = "SIR, Standardized Rate per 100k, and Relative Risk")
         points(1995:2015, rr, col = "red", type = "b", pch=19)
-        legend("topright", c("Observed SIR", "Modeled Relative Risk"), fill = c("blue", "red"))
+        points(1995:2015, rates, col = "green", type = "b", pch = 19)
+        legend("topright", c("Observed SIR", "Modeled Relative Risk", "Standardized Rate/ 100k Texans"), fill = c("blue", "red", "green"))
     })
     output$map <- renderPlot({
         if (input$cancerType == "All"){data <- countyAllYearsSIRAll} 
@@ -610,7 +611,7 @@ server <- function(input, output) {
                 axis.ticks = element_blank(),
                 panel.background = element_blank()
             ) +
-            scale_fill_brewer("Rurality Score", type = "seq", palette = 1, direction = -1, labels = c("Metro area (Population > 1 million)","Metro area (1 million > Population > 250,000)","Metro area (250,000 > Population)","Urban area adjacent to metro area (Population > 20,000)","Urban area NOT adjacent to metro area (Population > 20,000)","Urban area adjacent to metro area (19,999 > Population > 2,500)","Urban area NOT adjacent to metro area (19,999 > Population > 2,500)","Rural area OR (2,500 > Population) adjacent to metro area","Rural area OR (2,500 > Population) NOT adjacent to metro area"))
+            scale_fill_brewer(paste("Rurality Score in ", input$sociYear), type = "seq", palette = 1, direction = -1, labels = c("Metro area (Population > 1 million)","Metro area (1 million > Population > 250,000)","Metro area (250,000 > Population)","Urban area adjacent to metro area (Population > 20,000)","Urban area NOT adjacent to metro area (Population > 20,000)","Urban area adjacent to metro area (19,999 > Population > 2,500)","Urban area NOT adjacent to metro area (19,999 > Population > 2,500)","Rural area OR (2,500 > Population) adjacent to metro area","Rural area OR (2,500 > Population) NOT adjacent to metro area"))
     })
     output$poverty <- renderPlot({
         poverty_data <- data.frame(subset(poverty, Year == input$sociYear))
@@ -621,11 +622,9 @@ server <- function(input, output) {
                   axis.ticks = element_blank(),
                   panel.background = element_blank()
             ) +
-            scale_fill_brewer("Poverty Rate", palette = "RdYlGn", direction = -1)
+            scale_fill_brewer(paste("Poverty Rate in", input$sociYear), palette = "RdYlGn", direction = -1)
     })
-   # soci_res <- reactive({
-    #})
-    output$sociResults <- renderDataTable({
+    soci_res <- reactive({
         if (input$cancerType2 == "All"){data <- countySIRAll}
         if (input$cancerType2 == "Adenocarcinoma"){data <- countySIRAdeno}
         if (input$cancerType2 == "Small Cell Carcinoma"){data <- countySIRSmall}
@@ -643,13 +642,44 @@ server <- function(input, output) {
             f(idarea, model = "generic1", Cmatrix = mat_c()) + 
             f(e, model = "iid") + 
             f(idtime, model = "rw2", constr = T) 
-        soci_res <- inla(formula, 
-             family = "poisson", data = soci_data, E = Expected,
-             control.predictor = list(compute = TRUE), control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE))
-        d <- soci_res$summary.fixed[c("Rurality_Score", "Poverty_Rate"),c("0.025quant", "0.975quant")]
-        d <- cbind(d, c("Rurality Parameter", "Poverty Parameter"))
+        inla(formula, 
+            family = "poisson", data = soci_data, E = Expected,
+            control.predictor = list(compute = TRUE), control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE))
+    })
+    output$sociResults <- renderDataTable({
+        d <- soci_res()$summary.fixed[c("Rurality_Score", "Poverty_Rate"),c("mean","sd","0.025quant", "0.975quant")]
+        d <- cbind(d, c("Rurality", "Poverty"))
+        colnames(d) <- c("Distribution Mean for Parameter","Distribution Standard Deviation for Parameter","95% C.I. Lower Limit", "95% C.I. Upper Limit", "Parameter Name")
         d
     })
+    output$sociCountyRisk <- renderPlot({
+        n = (as.integer(input$sociYear)-1990)/5
+        data <- soci_res()$summary.fitted.values[(n*254-253):(n*254), 'mean']
+        data <- cbind(data, seq(48001, 48507, by = 2))
+        colnames(data) <- c("risk","code")
+        data <- as.data.frame(data)
+        data <- merge(map_data,data, by.x = "FIPS_ST_CN" , by.y = "code")
+        data <- st_as_sf(data)
+        ggplot(data) + geom_sf(aes(fill = risk)) +
+            ggtitle(paste("Modeled Relative Risk (RR) of ", input$cancerType2 ,"Lung Cancer \n by County in Texas in ", input$sociYear)) +
+            theme_bw() +
+            theme(line = element_blank(),
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank(),
+                  panel.background = element_blank()
+            ) +
+            scale_fill_gradient2("RR", midpoint = 1, low = "blue", mid = "white", high = "red") 
+    })
+    output$ruralMarginal <- renderPlot({
+        marginal <- data.frame(inla.smarginal(soci_res()$marginals.fixed$Rurality_Score))
+        ggplot(marginal, aes (x=x,y=y)) + geom_line() + labs(x = expression(beta[1]), y = "Density") + geom_vline(xintercept = 0, col = "black") + theme_bw()
+        
+    })
+    output$povertyMarginal <- renderPlot({
+        marginal <- data.frame(inla.smarginal(soci_res()$marginals.fixed$Poverty_Rate))
+        ggplot(marginal, aes (x=x,y=y)) + geom_line() + labs(x = expression(beta[2]), y = "Density") + geom_vline(xintercept = 0, col = "black") + theme_bw()
+    })
+    
 # COVID-19 Dashboard Page 4: Leaflet Plots & Model to Determine Presence of an Association
     output$covid <- renderLeaflet({
         if (input$covid == "cases"){data <- read_excel("covid_dashboard_data.xlsx", sheet = 1)}
@@ -728,8 +758,8 @@ server <- function(input, output) {
     output$model2 <- renderPlot({
         if (input$covid == "cases"){data <- read_excel("covid_dashboard_data.xlsx", sheet = 1)}
         if (input$covid == "mort"){data <- read_excel("covid_dashboard_data.xlsx", sheet = 2)}
-        cancer_data_2015 <- subset(countySIRAll, Year == 2015)
-        data1 <- merge(cancer_data_2015, data, by.x = "County_Code", by.y = "County_Code")
+        cancer_data_2017 <- read_excel("covid_dashboard_data.xlsx", sheet = 5)
+        data1 <- merge(cancer_data_2017, data, by.x = "County_Code", by.y = "County_Code")
         data1$idareau <- 1:nrow(data1)
         data1$idareav <- 1:nrow(data1)
         data1$Observed <- as.integer(data1$Observed)
