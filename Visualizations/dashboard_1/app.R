@@ -131,7 +131,7 @@ ui <- dashboardPage(skin = "red",
                             created December 2019, based on NPCR-CSS Submission, cut-off 11/07/19."),
                     tags$h5(tags$sup("4"), "Howlader N, Noone AM, Krapcho M, Miller D, Brest A, Yu M, Ruhl J, Tatalovich Z, Mariotto A, Lewis DR, Chen HS, Feuer EJ, Cronin KA (eds).", 
                             a("SEER Cancer Statistics Review",
-                              href = "https://seer.cancer.gov/csr/1975_2017/"), "1975-2017, National Cancer Institute. Bethesda, MD, based on November 2019 SEER data submission, posted to the SEER web site, April 2020."
+                              href = "https://seer.cancer.gov/csr/1975_2017/"), "Table 15.28. 1975-2017, National Cancer Institute. Bethesda, MD, based on November 2019 SEER data submission, posted to the SEER web site, April 2020."
                     )
                     ),
             # First Tab
@@ -324,7 +324,7 @@ ui <- dashboardPage(skin = "red",
                 fluidRow(
                     box(title = "COVID-19 Variable of Interest", status = "warning", solidHeader = TRUE, width = 6,
                         radioButtons("covid",NULL, c("Cumulative COVID-19 Cases since 3/4/20 per 100k Texans"="cases","Rate of Cumulative Confirmed COVID-19 Patients who Died"="mort")),
-                        tags$figcaption(tags$em("COVID-19 Data from TX DSHS", tags$sup("1"), " as of August 1st, 2020"))
+                        tags$figcaption(tags$em("COVID-19 Data from TX DSHS", tags$sup("1"), " as of August 21st, 2020"))
                         ),
                     box(title = "Lung Cancer Variable of Interest", status = "warning", solidHeader = TRUE, width = 6,
                         radioButtons("lung_cancer",NULL,c("Lung Cancer Diagnoses per 100k Texans in 2017"="cases","Deaths from Lung Cancer per 100k Texans for Sum of Yearly Populations between 1995 and 2017"="mort"))
@@ -622,7 +622,7 @@ server <- function(input, output) {
                   axis.ticks = element_blank(),
                   panel.background = element_blank()
             ) +
-            scale_fill_brewer(paste("Poverty Rate in", input$sociYear), palette = "RdYlGn", direction = -1)
+            scale_fill_brewer(paste("Poverty Rate (%) in", input$sociYear), palette = "RdYlGn", direction = -1)
     })
     soci_res <- reactive({
         if (input$cancerType2 == "All"){data <- countySIRAll}
