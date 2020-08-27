@@ -8,9 +8,8 @@ In order to be able to access any of the data, one needs to receive data access 
 
 At some point during this process, you will need to enter in the following user name and password to have access:
 ####
-**Username:** 13020-Nov2019
 
-**Password:** MNypJfhY
+**Contact author for this information as a data-usage form was required to have access**
 
 ### General
 - Examples of data analyses and extraction using the SEER*Stat county databases are in detail here: https://seer.cancer.gov/seerstat/tutorials/county.html
